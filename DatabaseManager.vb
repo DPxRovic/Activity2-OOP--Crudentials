@@ -3,6 +3,11 @@ Imports MySql.Data.MySqlClient
 Public Class DatabaseManager
     Private ReadOnly connectionString As String = "server=localhost;user id=root;password=;database=studentdb"
 
+    ' Get connection string (public method for other classes)
+    Public Function GetConnectionString() As String
+        Return connectionString
+    End Function
+
     ' Ensure the students table exists with all fields
     Public Sub EnsureTableExists()
         Using conn As New MySqlConnection(connectionString)
@@ -35,6 +40,47 @@ Public Class DatabaseManager
                     GuardianName VARCHAR(50),
                     GuardianPhone VARCHAR(15),
                     GuardianOccupation VARCHAR(50)
+                )"
+            Using cmd As New MySqlCommand(query, conn)
+                conn.Open()
+                cmd.ExecuteNonQuery()
+            End Using
+        End Using
+    End Sub
+
+    ' Ensure the archive table exists with all fields (same structure as students + timestamp)
+    Public Sub EnsureArchiveTableExists()
+        Using conn As New MySqlConnection(connectionString)
+            Dim query As String = "
+                CREATE TABLE IF NOT EXISTS archive (
+                    StudentID VARCHAR(20) PRIMARY KEY,
+                    LastName VARCHAR(50),
+                    FirstName VARCHAR(50),
+                    MiddleName VARCHAR(50),
+                    Suffix VARCHAR(10),
+                    Address VARCHAR(255),
+                    PlaceOfBirth VARCHAR(100),
+                    DOB DATE,
+                    Age INT,
+                    Gender VARCHAR(20),
+                    Nationality VARCHAR(50),
+                    Course VARCHAR(50),
+                    YearLevel VARCHAR(20),
+                    Section VARCHAR(10),
+                    Phone VARCHAR(15),
+                    Email VARCHAR(150),
+                    MotherName VARCHAR(50),
+                    MotherAddress VARCHAR(100),
+                    MotherPhone VARCHAR(15),
+                    MotherOccupation VARCHAR(50),
+                    FatherName VARCHAR(50),
+                    FatherAddress VARCHAR(100),
+                    FatherPhone VARCHAR(15),
+                    FatherOccupation VARCHAR(50),
+                    GuardianName VARCHAR(50),
+                    GuardianPhone VARCHAR(15),
+                    GuardianOccupation VARCHAR(50),
+                    ArchivedDate TIMESTAMP DEFAULT CURRENT_TIMESTAMP
                 )"
             Using cmd As New MySqlCommand(query, conn)
                 conn.Open()
@@ -194,6 +240,232 @@ Public Class DatabaseManager
         End Using
         Return year & nextNumber.ToString("D4")
     End Function
+
+    ' === ARCHIVE SYSTEM METHODS ===
+
+    ' Move student record to archive (copies to archive table then deletes from students)
+    Public Shared Function MoveToArchive(student As StudentRecord) As Boolean
+        Try
+            Dim db As New DatabaseManager()
+            db.EnsureArchiveTableExists() ' Ensure archive table exists
+
+            Using conn As New MySqlConnection(db.connectionString)
+                conn.Open()
+                Using transaction As MySqlTransaction = conn.BeginTransaction()
+                    Try
+                        ' Insert into archive table
+                        Dim insertQuery As String = "INSERT INTO archive (StudentID, LastName, FirstName, MiddleName, Suffix, Address, PlaceOfBirth, DOB, Age, Gender, Nationality, Course, YearLevel, Section, Phone, Email, MotherName, MotherAddress, MotherPhone, MotherOccupation, FatherName, FatherAddress, FatherPhone, FatherOccupation, GuardianName, GuardianPhone, GuardianOccupation) " &
+                                                    "VALUES (@StudentID, @LastName, @FirstName, @MiddleName, @Suffix, @Address, @PlaceOfBirth, @DOB, @Age, @Gender, @Nationality, @Course, @YearLevel, @Section, @Phone, @Email, @MotherName, @MotherAddress, @MotherPhone, @MotherOccupation, @FatherName, @FatherAddress, @FatherPhone, @FatherOccupation, @GuardianName, @GuardianPhone, @GuardianOccupation)"
+                        Using insertCmd As New MySqlCommand(insertQuery, conn, transaction)
+                            insertCmd.Parameters.AddWithValue("@StudentID", student.StudentID)
+                            insertCmd.Parameters.AddWithValue("@LastName", student.LastName)
+                            insertCmd.Parameters.AddWithValue("@FirstName", student.FirstName)
+                            insertCmd.Parameters.AddWithValue("@MiddleName", student.MiddleName)
+                            insertCmd.Parameters.AddWithValue("@Suffix", student.Suffix)
+                            insertCmd.Parameters.AddWithValue("@Address", student.Address)
+                            insertCmd.Parameters.AddWithValue("@PlaceOfBirth", student.PlaceOfBirth)
+                            insertCmd.Parameters.AddWithValue("@DOB", student.DOB)
+                            insertCmd.Parameters.AddWithValue("@Age", student.Age)
+                            insertCmd.Parameters.AddWithValue("@Gender", student.Gender)
+                            insertCmd.Parameters.AddWithValue("@Nationality", student.Nationality)
+                            insertCmd.Parameters.AddWithValue("@Course", student.Course)
+                            insertCmd.Parameters.AddWithValue("@YearLevel", student.YearLevel)
+                            insertCmd.Parameters.AddWithValue("@Section", student.Section)
+                            insertCmd.Parameters.AddWithValue("@Phone", student.Phone)
+                            insertCmd.Parameters.AddWithValue("@Email", student.Email)
+                            insertCmd.Parameters.AddWithValue("@MotherName", student.MotherName)
+                            insertCmd.Parameters.AddWithValue("@MotherAddress", student.MotherAddress)
+                            insertCmd.Parameters.AddWithValue("@MotherPhone", student.MotherPhone)
+                            insertCmd.Parameters.AddWithValue("@MotherOccupation", student.MotherOccupation)
+                            insertCmd.Parameters.AddWithValue("@FatherName", student.FatherName)
+                            insertCmd.Parameters.AddWithValue("@FatherAddress", student.FatherAddress)
+                            insertCmd.Parameters.AddWithValue("@FatherPhone", student.FatherPhone)
+                            insertCmd.Parameters.AddWithValue("@FatherOccupation", student.FatherOccupation)
+                            insertCmd.Parameters.AddWithValue("@GuardianName", student.GuardianName)
+                            insertCmd.Parameters.AddWithValue("@GuardianPhone", student.GuardianPhone)
+                            insertCmd.Parameters.AddWithValue("@GuardianOccupation", student.GuardianOccupation)
+                            insertCmd.ExecuteNonQuery()
+                        End Using
+
+                        ' Delete from students table
+                        Dim deleteQuery As String = "DELETE FROM students WHERE StudentID = @StudentID"
+                        Using deleteCmd As New MySqlCommand(deleteQuery, conn, transaction)
+                            deleteCmd.Parameters.AddWithValue("@StudentID", student.StudentID)
+                            deleteCmd.ExecuteNonQuery()
+                        End Using
+
+                        ' Commit transaction
+                        transaction.Commit()
+                        Return True
+                    Catch ex As Exception
+                        transaction.Rollback()
+                        Return False
+                    End Try
+                End Using
+            End Using
+        Catch ex As Exception
+            Return False
+        End Try
+    End Function
+
+    ' Restore student record from archive (copies back to students table then deletes from archive)
+    Public Shared Function RestoreFromArchive(studentID As String) As Boolean
+        Try
+            Dim db As New DatabaseManager()
+            Using conn As New MySqlConnection(db.connectionString)
+                conn.Open()
+                Using transaction As MySqlTransaction = conn.BeginTransaction()
+                    Try
+                        ' Get student record from archive
+                        Dim student As StudentRecord = GetStudentFromArchive(studentID)
+                        If student Is Nothing Then
+                            Return False
+                        End If
+
+                        ' Insert back into students table
+                        Dim insertQuery As String = "INSERT INTO students (StudentID, LastName, FirstName, MiddleName, Suffix, Address, PlaceOfBirth, DOB, Age, Gender, Nationality, Course, YearLevel, Section, Phone, Email, MotherName, MotherAddress, MotherPhone, MotherOccupation, FatherName, FatherAddress, FatherPhone, FatherOccupation, GuardianName, GuardianPhone, GuardianOccupation) " &
+                                                    "VALUES (@StudentID, @LastName, @FirstName, @MiddleName, @Suffix, @Address, @PlaceOfBirth, @DOB, @Age, @Gender, @Nationality, @Course, @YearLevel, @Section, @Phone, @Email, @MotherName, @MotherAddress, @MotherPhone, @MotherOccupation, @FatherName, @FatherAddress, @FatherPhone, @FatherOccupation, @GuardianName, @GuardianPhone, @GuardianOccupation)"
+                        Using insertCmd As New MySqlCommand(insertQuery, conn, transaction)
+                            insertCmd.Parameters.AddWithValue("@StudentID", student.StudentID)
+                            insertCmd.Parameters.AddWithValue("@LastName", student.LastName)
+                            insertCmd.Parameters.AddWithValue("@FirstName", student.FirstName)
+                            insertCmd.Parameters.AddWithValue("@MiddleName", student.MiddleName)
+                            insertCmd.Parameters.AddWithValue("@Suffix", student.Suffix)
+                            insertCmd.Parameters.AddWithValue("@Address", student.Address)
+                            insertCmd.Parameters.AddWithValue("@PlaceOfBirth", student.PlaceOfBirth)
+                            insertCmd.Parameters.AddWithValue("@DOB", student.DOB)
+                            insertCmd.Parameters.AddWithValue("@Age", student.Age)
+                            insertCmd.Parameters.AddWithValue("@Gender", student.Gender)
+                            insertCmd.Parameters.AddWithValue("@Nationality", student.Nationality)
+                            insertCmd.Parameters.AddWithValue("@Course", student.Course)
+                            insertCmd.Parameters.AddWithValue("@YearLevel", student.YearLevel)
+                            insertCmd.Parameters.AddWithValue("@Section", student.Section)
+                            insertCmd.Parameters.AddWithValue("@Phone", student.Phone)
+                            insertCmd.Parameters.AddWithValue("@Email", student.Email)
+                            insertCmd.Parameters.AddWithValue("@MotherName", student.MotherName)
+                            insertCmd.Parameters.AddWithValue("@MotherAddress", student.MotherAddress)
+                            insertCmd.Parameters.AddWithValue("@MotherPhone", student.MotherPhone)
+                            insertCmd.Parameters.AddWithValue("@MotherOccupation", student.MotherOccupation)
+                            insertCmd.Parameters.AddWithValue("@FatherName", student.FatherName)
+                            insertCmd.Parameters.AddWithValue("@FatherAddress", student.FatherAddress)
+                            insertCmd.Parameters.AddWithValue("@FatherPhone", student.FatherPhone)
+                            insertCmd.Parameters.AddWithValue("@FatherOccupation", student.FatherOccupation)
+                            insertCmd.Parameters.AddWithValue("@GuardianName", student.GuardianName)
+                            insertCmd.Parameters.AddWithValue("@GuardianPhone", student.GuardianPhone)
+                            insertCmd.Parameters.AddWithValue("@GuardianOccupation", student.GuardianOccupation)
+                            insertCmd.ExecuteNonQuery()
+                        End Using
+
+                        ' Delete from archive table
+                        Dim deleteQuery As String = "DELETE FROM archive WHERE StudentID = @StudentID"
+                        Using deleteCmd As New MySqlCommand(deleteQuery, conn, transaction)
+                            deleteCmd.Parameters.AddWithValue("@StudentID", studentID)
+                            deleteCmd.ExecuteNonQuery()
+                        End Using
+
+                        ' Commit transaction
+                        transaction.Commit()
+                        Return True
+                    Catch ex As Exception
+                        transaction.Rollback()
+                        Return False
+                    End Try
+                End Using
+            End Using
+        Catch ex As Exception
+            Return False
+        End Try
+    End Function
+
+    ' Delete permanently from archive
+    Public Shared Function DeleteFromArchive(studentID As String) As Boolean
+        Try
+            Dim db As New DatabaseManager()
+            Using conn As New MySqlConnection(db.connectionString)
+                Dim query As String = "DELETE FROM archive WHERE StudentID = @StudentID"
+                Using cmd As New MySqlCommand(query, conn)
+                    cmd.Parameters.AddWithValue("@StudentID", studentID)
+                    conn.Open()
+                    Return cmd.ExecuteNonQuery() = 1
+                End Using
+            End Using
+        Catch ex As Exception
+            Return False
+        End Try
+    End Function
+
+    ' Get all archived student records
+    Public Shared Function GetArchiveData() As DataTable
+        Try
+            Dim db As New DatabaseManager()
+            db.EnsureArchiveTableExists() ' Ensure archive table exists
+
+            Dim dt As New DataTable()
+            Using conn As New MySqlConnection(db.connectionString)
+                Dim query As String = "SELECT * FROM archive ORDER BY ArchivedDate DESC"
+                Using cmd As New MySqlCommand(query, conn)
+                    conn.Open()
+                    Using reader As MySqlDataReader = cmd.ExecuteReader()
+                        dt.Load(reader)
+                    End Using
+                End Using
+            End Using
+            Return dt
+        Catch ex As Exception
+            Return New DataTable()
+        End Try
+    End Function
+
+    ' Helper method to get a student record from archive
+    Private Shared Function GetStudentFromArchive(studentID As String) As StudentRecord
+        Try
+            Dim db As New DatabaseManager()
+            Using conn As New MySqlConnection(db.connectionString)
+                Dim query As String = "SELECT * FROM archive WHERE StudentID = @StudentID"
+                Using cmd As New MySqlCommand(query, conn)
+                    cmd.Parameters.AddWithValue("@StudentID", studentID)
+                    conn.Open()
+                    Using reader As MySqlDataReader = cmd.ExecuteReader()
+                        If reader.Read() Then
+                            Dim student As New StudentRecord()
+                            student.StudentID = reader("StudentID").ToString()
+                            student.LastName = If(IsDBNull(reader("LastName")), "", reader("LastName").ToString())
+                            student.FirstName = If(IsDBNull(reader("FirstName")), "", reader("FirstName").ToString())
+                            student.MiddleName = If(IsDBNull(reader("MiddleName")), "", reader("MiddleName").ToString())
+                            student.Suffix = If(IsDBNull(reader("Suffix")), "", reader("Suffix").ToString())
+                            student.Address = If(IsDBNull(reader("Address")), "", reader("Address").ToString())
+                            student.PlaceOfBirth = If(IsDBNull(reader("PlaceOfBirth")), "", reader("PlaceOfBirth").ToString())
+                            student.DOB = If(IsDBNull(reader("DOB")), Date.MinValue, Convert.ToDateTime(reader("DOB")))
+                            student.Age = If(IsDBNull(reader("Age")), 0, Convert.ToInt32(reader("Age")))
+                            student.Gender = If(IsDBNull(reader("Gender")), "", reader("Gender").ToString())
+                            student.Nationality = If(IsDBNull(reader("Nationality")), "", reader("Nationality").ToString())
+                            student.Course = If(IsDBNull(reader("Course")), "", reader("Course").ToString())
+                            student.YearLevel = If(IsDBNull(reader("YearLevel")), "", reader("YearLevel").ToString())
+                            student.Section = If(IsDBNull(reader("Section")), "", reader("Section").ToString())
+                            student.Phone = If(IsDBNull(reader("Phone")), "", reader("Phone").ToString())
+                            student.Email = If(IsDBNull(reader("Email")), "", reader("Email").ToString())
+                            student.MotherName = If(IsDBNull(reader("MotherName")), "", reader("MotherName").ToString())
+                            student.MotherAddress = If(IsDBNull(reader("MotherAddress")), "", reader("MotherAddress").ToString())
+                            student.MotherPhone = If(IsDBNull(reader("MotherPhone")), "", reader("MotherPhone").ToString())
+                            student.MotherOccupation = If(IsDBNull(reader("MotherOccupation")), "", reader("MotherOccupation").ToString())
+                            student.FatherName = If(IsDBNull(reader("FatherName")), "", reader("FatherName").ToString())
+                            student.FatherAddress = If(IsDBNull(reader("FatherAddress")), "", reader("FatherAddress").ToString())
+                            student.FatherPhone = If(IsDBNull(reader("FatherPhone")), "", reader("FatherPhone").ToString())
+                            student.FatherOccupation = If(IsDBNull(reader("FatherOccupation")), "", reader("FatherOccupation").ToString())
+                            student.GuardianName = If(IsDBNull(reader("GuardianName")), "", reader("GuardianName").ToString())
+                            student.GuardianPhone = If(IsDBNull(reader("GuardianPhone")), "", reader("GuardianPhone").ToString())
+                            student.GuardianOccupation = If(IsDBNull(reader("GuardianOccupation")), "", reader("GuardianOccupation").ToString())
+                            Return student
+                        End If
+                    End Using
+                End Using
+            End Using
+        Catch ex As Exception
+            ' Return Nothing on error
+        End Try
+        Return Nothing
+    End Function
+
 End Class
 
 ' Helper class to represent a student record

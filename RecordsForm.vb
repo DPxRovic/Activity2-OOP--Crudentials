@@ -130,33 +130,102 @@
         End If
     End Sub
 
+    ' Modified Archive button (previously Delete button)
     Private Sub btnArchive_Click(sender As Object, e As EventArgs) Handles btnArchive.Click
         If dgvRecords.SelectedRows.Count > 0 Then
+            Dim selectedRow As DataGridViewRow = dgvRecords.SelectedRows(0)
+            Dim studentID As String = selectedRow.Cells("StudentID").Value.ToString()
+            Dim fullName As String = ""
+
+            ' Get student name for confirmation message
+            If dgvRecords.Columns.Contains("FullName") Then
+                Dim cell = selectedRow.Cells("FullName")
+                If cell IsNot Nothing AndAlso Not IsDBNull(cell.Value) Then
+                    fullName = cell.Value.ToString()
+                End If
+            End If
+
             Dim result As DialogResult = MessageBox.Show(
-                "Are you sure you want to delete this student record?",
-                "Confirm Delete",
+                $"Are you sure you want to archive this student record?" & vbCrLf &
+                $"Student: {fullName}" & vbCrLf & vbCrLf &
+                "The record will be moved to archive and can be restored later.",
+                "Confirm Archive",
                 MessageBoxButtons.YesNo,
-                MessageBoxIcon.Warning
+                MessageBoxIcon.Question
             )
 
             If result = DialogResult.Yes Then
                 Try
-                    Dim selectedRow As DataGridViewRow = dgvRecords.SelectedRows(0)
-                    Dim studentID As String = selectedRow.Cells("StudentID").Value.ToString()
+                    ' Find the complete student record from the DataTable
+                    Dim studentRecord As DataRow = Nothing
+                    For Each row As DataRow In dt.Rows
+                        If row("StudentID").ToString() = studentID Then
+                            studentRecord = row
+                            Exit For
+                        End If
+                    Next
 
-                    If db.DeleteStudent(studentID) Then
-                        MessageBox.Show("Student record deleted successfully.")
-                        LoadStudentRecords() ' Refresh the data
+                    If studentRecord IsNot Nothing Then
+                        ' Convert DataRow to StudentRecord object
+                        Dim student As New StudentRecord()
+                        student.StudentID = studentRecord("StudentID").ToString()
+                        student.LastName = If(IsDBNull(studentRecord("LastName")), "", studentRecord("LastName").ToString())
+                        student.FirstName = If(IsDBNull(studentRecord("FirstName")), "", studentRecord("FirstName").ToString())
+                        student.MiddleName = If(IsDBNull(studentRecord("MiddleName")), "", studentRecord("MiddleName").ToString())
+                        student.Suffix = If(IsDBNull(studentRecord("Suffix")), "", studentRecord("Suffix").ToString())
+                        student.Address = If(IsDBNull(studentRecord("Address")), "", studentRecord("Address").ToString())
+                        student.PlaceOfBirth = If(IsDBNull(studentRecord("PlaceOfBirth")), "", studentRecord("PlaceOfBirth").ToString())
+                        student.DOB = If(IsDBNull(studentRecord("DOB")), Date.MinValue, Convert.ToDateTime(studentRecord("DOB")))
+                        student.Age = If(IsDBNull(studentRecord("Age")), 0, Convert.ToInt32(studentRecord("Age")))
+                        student.Gender = If(IsDBNull(studentRecord("Gender")), "", studentRecord("Gender").ToString())
+                        student.Nationality = If(IsDBNull(studentRecord("Nationality")), "", studentRecord("Nationality").ToString())
+                        student.Course = If(IsDBNull(studentRecord("Course")), "", studentRecord("Course").ToString())
+                        student.YearLevel = If(IsDBNull(studentRecord("YearLevel")), "", studentRecord("YearLevel").ToString())
+                        student.Section = If(IsDBNull(studentRecord("Section")), "", studentRecord("Section").ToString())
+                        student.Phone = If(IsDBNull(studentRecord("Phone")), "", studentRecord("Phone").ToString())
+                        student.Email = If(IsDBNull(studentRecord("Email")), "", studentRecord("Email").ToString())
+                        student.MotherName = If(IsDBNull(studentRecord("MotherName")), "", studentRecord("MotherName").ToString())
+                        student.MotherAddress = If(IsDBNull(studentRecord("MotherAddress")), "", studentRecord("MotherAddress").ToString())
+                        student.MotherPhone = If(IsDBNull(studentRecord("MotherPhone")), "", studentRecord("MotherPhone").ToString())
+                        student.MotherOccupation = If(IsDBNull(studentRecord("MotherOccupation")), "", studentRecord("MotherOccupation").ToString())
+                        student.FatherName = If(IsDBNull(studentRecord("FatherName")), "", studentRecord("FatherName").ToString())
+                        student.FatherAddress = If(IsDBNull(studentRecord("FatherAddress")), "", studentRecord("FatherAddress").ToString())
+                        student.FatherPhone = If(IsDBNull(studentRecord("FatherPhone")), "", studentRecord("FatherPhone").ToString())
+                        student.FatherOccupation = If(IsDBNull(studentRecord("FatherOccupation")), "", studentRecord("FatherOccupation").ToString())
+                        student.GuardianName = If(IsDBNull(studentRecord("GuardianName")), "", studentRecord("GuardianName").ToString())
+                        student.GuardianPhone = If(IsDBNull(studentRecord("GuardianPhone")), "", studentRecord("GuardianPhone").ToString())
+                        student.GuardianOccupation = If(IsDBNull(studentRecord("GuardianOccupation")), "", studentRecord("GuardianOccupation").ToString())
+
+                        ' Move to archive using DatabaseManager
+                        If DatabaseManager.MoveToArchive(student) Then
+                            MessageBox.Show("Record moved to archive successfully.", "Success", MessageBoxButtons.OK, MessageBoxIcon.Information)
+                            LoadStudentRecords() ' Refresh the data
+                        Else
+                            MessageBox.Show("Failed to move record to archive.", "Error", MessageBoxButtons.OK, MessageBoxIcon.Error)
+                        End If
                     Else
-                        MessageBox.Show("Failed to delete student record.")
+                        MessageBox.Show("Error: Could not find student record.", "Error", MessageBoxButtons.OK, MessageBoxIcon.Error)
                     End If
                 Catch ex As Exception
-                    MessageBox.Show("Error deleting record: " & ex.Message)
+                    MessageBox.Show("Error archiving record: " & ex.Message, "Error", MessageBoxButtons.OK, MessageBoxIcon.Error)
                 End Try
             End If
         Else
-            MessageBox.Show("Please select a record to delete.")
+            MessageBox.Show("Please select a record to archive.")
         End If
+    End Sub
+
+    ' New button to open Archive form
+    Private Sub btnOpenArchive_Click(sender As Object, e As EventArgs) Handles btnOpenArchive.Click
+        Try
+            Dim archiveForm As New ArchiveForm(Me) ' Pass reference to refresh records when needed
+            archiveForm.ShowDialog()
+
+            ' Refresh records in case any were restored
+            LoadStudentRecords()
+        Catch ex As Exception
+            MessageBox.Show("Error opening archive: " & ex.Message, "Error", MessageBoxButtons.OK, MessageBoxIcon.Error)
+        End Try
     End Sub
 
     Private Sub btnBack_Click(sender As Object, e As EventArgs) Handles btnBack.Click
@@ -169,6 +238,11 @@
         If result = DialogResult.Yes Then
             Me.Close()
         End If
+    End Sub
+
+    ' Public method to refresh records (called from ArchiveForm when restoring)
+    Public Sub RefreshRecords()
+        LoadStudentRecords()
     End Sub
 
     Private Sub pnlTop_Paint(sender As Object, e As PaintEventArgs) Handles pnlTop.Paint

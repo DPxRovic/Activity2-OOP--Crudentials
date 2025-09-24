@@ -30,6 +30,7 @@ Partial Class RecordsForm
         btnUpdate = New Button()
         btnArchive = New Button()
         btnRefresh = New Button()
+        btnOpenArchive = New Button()
         btnBack = New Button()
         pnlTop.SuspendLayout()
         CType(dgvRecords, ComponentModel.ISupportInitialize).BeginInit()
@@ -86,6 +87,7 @@ Partial Class RecordsForm
         pnlBottom.Controls.Add(btnUpdate)
         pnlBottom.Controls.Add(btnArchive)
         pnlBottom.Controls.Add(btnRefresh)
+        pnlBottom.Controls.Add(btnOpenArchive)
         pnlBottom.Controls.Add(btnBack)
         pnlBottom.Dock = DockStyle.Bottom
         pnlBottom.Location = New Point(0, 600)
@@ -126,6 +128,16 @@ Partial Class RecordsForm
         btnRefresh.Text = "Refresh Data"
         btnRefresh.UseVisualStyleBackColor = True
         ' 
+        ' btnOpenArchive
+        ' 
+        btnOpenArchive.Location = New Point(503, 20)
+        btnOpenArchive.Margin = New Padding(3, 4, 3, 4)
+        btnOpenArchive.Name = "btnOpenArchive"
+        btnOpenArchive.Size = New Size(137, 40)
+        btnOpenArchive.TabIndex = 3
+        btnOpenArchive.Text = "Open Archive"
+        btnOpenArchive.UseVisualStyleBackColor = True
+        ' 
         ' btnBack
         ' 
         btnBack.Anchor = AnchorStyles.Bottom Or AnchorStyles.Right
@@ -133,13 +145,13 @@ Partial Class RecordsForm
         btnBack.Margin = New Padding(3, 4, 3, 4)
         btnBack.Name = "btnBack"
         btnBack.Size = New Size(160, 40)
-        btnBack.TabIndex = 3
+        btnBack.TabIndex = 4
         btnBack.Text = "Back to Registration"
         btnBack.UseVisualStyleBackColor = True
         ' 
         ' RecordsForm
         ' 
-        AutoScaleDimensions = New SizeF(8F, 20F)
+        AutoScaleDimensions = New SizeF(8.0F, 20.0F)
         AutoScaleMode = AutoScaleMode.Font
         ClientSize = New Size(914, 680)
         Controls.Add(dgvRecords)
@@ -165,5 +177,6 @@ Partial Class RecordsForm
     Friend WithEvents btnUpdate As Button
     Friend WithEvents btnArchive As Button
     Friend WithEvents btnRefresh As Button
+    Friend WithEvents btnOpenArchive As Button
     Friend WithEvents btnBack As Button
 End Class
