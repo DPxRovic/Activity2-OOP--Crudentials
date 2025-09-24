@@ -26,7 +26,7 @@ Public Class DatabaseManager
                     Nationality VARCHAR(50),
                     Course VARCHAR(50),
                     YearLevel VARCHAR(20),
-                    Section VARCHAR(10),
+                    Section CHAR(1),
                     Phone VARCHAR(15),
                     Email VARCHAR(150),
                     MotherName VARCHAR(50),
@@ -66,7 +66,7 @@ Public Class DatabaseManager
                     Nationality VARCHAR(50),
                     Course VARCHAR(50),
                     YearLevel VARCHAR(20),
-                    Section VARCHAR(10),
+                    Section CHAR(1),
                     Phone VARCHAR(15),
                     Email VARCHAR(150),
                     MotherName VARCHAR(50),
@@ -89,8 +89,19 @@ Public Class DatabaseManager
         End Using
     End Sub
 
+    ' Small helper to validate section input on server-side
+    Private Function IsValidSectionForDb(section As String) As Boolean
+        If String.IsNullOrWhiteSpace(section) Then Return False
+        Return System.Text.RegularExpressions.Regex.IsMatch(section.Trim(), "^[A-Za-z]$")
+    End Function
+
     ' CREATE: Insert a new student record
     Public Function InsertStudent(student As StudentRecord) As Boolean
+        ' Validate Section server-side to avoid storing invalid sections
+        If Not IsValidSectionForDb(student.Section) Then
+            Return False
+        End If
+
         Using conn As New MySqlConnection(connectionString)
             Dim query As String = "INSERT INTO students (StudentID, LastName, FirstName, MiddleName, Suffix, Address, PlaceOfBirth, DOB, Age, Gender, Nationality, Course, YearLevel, Section, Phone, Email, MotherName, MotherAddress, MotherPhone, MotherOccupation, FatherName, FatherAddress, FatherPhone, FatherOccupation, GuardianName, GuardianPhone, GuardianOccupation) " &
                                   "VALUES (@StudentID, @LastName, @FirstName, @MiddleName, @Suffix, @Address, @PlaceOfBirth, @DOB, @Age, @Gender, @Nationality, @Course, @YearLevel, @Section, @Phone, @Email, @MotherName, @MotherAddress, @MotherPhone, @MotherOccupation, @FatherName, @FatherAddress, @FatherPhone, @FatherOccupation, @GuardianName, @GuardianPhone, @GuardianOccupation)"
@@ -102,7 +113,7 @@ Public Class DatabaseManager
                 cmd.Parameters.AddWithValue("@Suffix", student.Suffix)
                 cmd.Parameters.AddWithValue("@Address", student.Address)
                 cmd.Parameters.AddWithValue("@PlaceOfBirth", student.PlaceOfBirth)
-                cmd.Parameters.AddWithValue("@DOB", student.DOB)
+                cmd.Parameters.AddWithValue("@DOB", If(student.DOB = Date.MinValue, CType(DBNull.Value, Object), student.DOB))
                 cmd.Parameters.AddWithValue("@Age", student.Age)
                 cmd.Parameters.AddWithValue("@Gender", student.Gender)
                 cmd.Parameters.AddWithValue("@Nationality", student.Nationality)
@@ -145,6 +156,10 @@ Public Class DatabaseManager
 
     ' UPDATE: Update a student record by StudentID (Basic fields only - for backward compatibility)
     Public Function UpdateStudent(student As StudentRecord) As Boolean
+        If Not IsValidSectionForDb(student.Section) Then
+            Return False
+        End If
+
         Using conn As New MySqlConnection(connectionString)
             Dim query As String = "UPDATE students SET LastName=@LastName, FirstName=@FirstName, MiddleName=@MiddleName, Address=@Address, PlaceOfBirth=@PlaceOfBirth, DOB=@DOB, Age=@Age, Gender=@Gender, Nationality=@Nationality, Course=@Course, YearLevel=@YearLevel, Section=@Section WHERE StudentID=@StudentID"
             Using cmd As New MySqlCommand(query, conn)
@@ -154,7 +169,7 @@ Public Class DatabaseManager
                 cmd.Parameters.AddWithValue("@MiddleName", student.MiddleName)
                 cmd.Parameters.AddWithValue("@Address", student.Address)
                 cmd.Parameters.AddWithValue("@PlaceOfBirth", student.PlaceOfBirth)
-                cmd.Parameters.AddWithValue("@DOB", student.DOB)
+                cmd.Parameters.AddWithValue("@DOB", If(student.DOB = Date.MinValue, CType(DBNull.Value, Object), student.DOB))
                 cmd.Parameters.AddWithValue("@Age", student.Age)
                 cmd.Parameters.AddWithValue("@Gender", student.Gender)
                 cmd.Parameters.AddWithValue("@Nationality", student.Nationality)
@@ -169,6 +184,10 @@ Public Class DatabaseManager
 
     ' UPDATE COMPLETE: Update a student record with ALL fields (for UpdateStudentRegistration form)
     Public Function UpdateStudentComplete(student As StudentRecord) As Boolean
+        If Not IsValidSectionForDb(student.Section) Then
+            Return False
+        End If
+
         Using conn As New MySqlConnection(connectionString)
             Dim query As String = "UPDATE students SET " &
                                   "LastName=@LastName, FirstName=@FirstName, MiddleName=@MiddleName, Suffix=@Suffix, " &
@@ -187,7 +206,7 @@ Public Class DatabaseManager
                 cmd.Parameters.AddWithValue("@Suffix", student.Suffix)
                 cmd.Parameters.AddWithValue("@Address", student.Address)
                 cmd.Parameters.AddWithValue("@PlaceOfBirth", student.PlaceOfBirth)
-                cmd.Parameters.AddWithValue("@DOB", student.DOB)
+                cmd.Parameters.AddWithValue("@DOB", If(student.DOB = Date.MinValue, CType(DBNull.Value, Object), student.DOB))
                 cmd.Parameters.AddWithValue("@Age", student.Age)
                 cmd.Parameters.AddWithValue("@Gender", student.Gender)
                 cmd.Parameters.AddWithValue("@Nationality", student.Nationality)
@@ -249,7 +268,7 @@ Public Class DatabaseManager
             Dim db As New DatabaseManager()
             db.EnsureArchiveTableExists() ' Ensure archive table exists
 
-            Using conn As New MySqlConnection(db.connectionString)
+            Using conn As New MySqlConnection(db.GetConnectionString())
                 conn.Open()
                 Using transaction As MySqlTransaction = conn.BeginTransaction()
                     Try
@@ -264,7 +283,7 @@ Public Class DatabaseManager
                             insertCmd.Parameters.AddWithValue("@Suffix", student.Suffix)
                             insertCmd.Parameters.AddWithValue("@Address", student.Address)
                             insertCmd.Parameters.AddWithValue("@PlaceOfBirth", student.PlaceOfBirth)
-                            insertCmd.Parameters.AddWithValue("@DOB", student.DOB)
+                            insertCmd.Parameters.AddWithValue("@DOB", If(student.DOB = Date.MinValue, CType(DBNull.Value, Object), student.DOB))
                             insertCmd.Parameters.AddWithValue("@Age", student.Age)
                             insertCmd.Parameters.AddWithValue("@Gender", student.Gender)
                             insertCmd.Parameters.AddWithValue("@Nationality", student.Nationality)
@@ -312,7 +331,7 @@ Public Class DatabaseManager
     Public Shared Function RestoreFromArchive(studentID As String) As Boolean
         Try
             Dim db As New DatabaseManager()
-            Using conn As New MySqlConnection(db.connectionString)
+            Using conn As New MySqlConnection(db.GetConnectionString())
                 conn.Open()
                 Using transaction As MySqlTransaction = conn.BeginTransaction()
                     Try
@@ -322,7 +341,12 @@ Public Class DatabaseManager
                             Return False
                         End If
 
-                        ' Insert back into students table
+                        ' Insert back into students table (validate Section)
+                        If Not System.Text.RegularExpressions.Regex.IsMatch(student.Section.Trim(), "^[A-Za-z]$") Then
+                            ' Section invalid, block restore
+                            Return False
+                        End If
+
                         Dim insertQuery As String = "INSERT INTO students (StudentID, LastName, FirstName, MiddleName, Suffix, Address, PlaceOfBirth, DOB, Age, Gender, Nationality, Course, YearLevel, Section, Phone, Email, MotherName, MotherAddress, MotherPhone, MotherOccupation, FatherName, FatherAddress, FatherPhone, FatherOccupation, GuardianName, GuardianPhone, GuardianOccupation) " &
                                                     "VALUES (@StudentID, @LastName, @FirstName, @MiddleName, @Suffix, @Address, @PlaceOfBirth, @DOB, @Age, @Gender, @Nationality, @Course, @YearLevel, @Section, @Phone, @Email, @MotherName, @MotherAddress, @MotherPhone, @MotherOccupation, @FatherName, @FatherAddress, @FatherPhone, @FatherOccupation, @GuardianName, @GuardianPhone, @GuardianOccupation)"
                         Using insertCmd As New MySqlCommand(insertQuery, conn, transaction)
@@ -333,7 +357,7 @@ Public Class DatabaseManager
                             insertCmd.Parameters.AddWithValue("@Suffix", student.Suffix)
                             insertCmd.Parameters.AddWithValue("@Address", student.Address)
                             insertCmd.Parameters.AddWithValue("@PlaceOfBirth", student.PlaceOfBirth)
-                            insertCmd.Parameters.AddWithValue("@DOB", student.DOB)
+                            insertCmd.Parameters.AddWithValue("@DOB", If(student.DOB = Date.MinValue, CType(DBNull.Value, Object), student.DOB))
                             insertCmd.Parameters.AddWithValue("@Age", student.Age)
                             insertCmd.Parameters.AddWithValue("@Gender", student.Gender)
                             insertCmd.Parameters.AddWithValue("@Nationality", student.Nationality)

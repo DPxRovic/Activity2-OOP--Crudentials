@@ -1,4 +1,8 @@
-﻿Public Class StudentRegistrationForm
+﻿Imports System.Text.RegularExpressions
+
+Public Class StudentRegistrationForm
+    Private ErrorProvider1 As New ErrorProvider()
+
     ' Register button
     Private Sub btnRegister_Click(sender As Object, e As EventArgs) Handles btnRegister.Click
         ' Validate only the required fields
@@ -10,7 +14,7 @@
            cboGender.SelectedIndex = -1 OrElse
            cboCourse.SelectedIndex = -1 OrElse
            cboYearLevel.SelectedIndex = -1 OrElse
-           String.IsNullOrWhiteSpace(txtSection.Text) Then
+           cmbSection.SelectedItem Is Nothing Then
 
             MessageBox.Show("Please fill all required fields.", "Error", MessageBoxButtons.OK, MessageBoxIcon.Error)
             lblStatus.ForeColor = Color.Red
@@ -26,9 +30,18 @@
             Return
         End If
 
-        ' Validate Section format
-        If Not IsValidSection(txtSection.Text) Then
-            MessageBox.Show("Please follow the format provided.", "Error", MessageBoxButtons.OK, MessageBoxIcon.Error)
+        ' Validate Section format (single letter)
+        If Not IsValidSection(cmbSection.SelectedItem.ToString()) Then
+            MessageBox.Show("Please select a valid Section (letters only).", "Error", MessageBoxButtons.OK, MessageBoxIcon.Error)
+            lblSectionError.Text = "Select A-F"
+            lblStatus.ForeColor = Color.Red
+            lblStatus.Text = "Registration Unsuccessful."
+            Return
+        End If
+
+        ' Validate all name and occupation fields
+        If Not ValidateAllNameFields() Then
+            MessageBox.Show("Please correct the highlighted fields before saving.", "Validation Error", MessageBoxButtons.OK, MessageBoxIcon.Error)
             lblStatus.ForeColor = Color.Red
             lblStatus.Text = "Registration Unsuccessful."
             Return
@@ -59,7 +72,7 @@
             student.Nationality = cboNationality.SelectedItem.ToString()
             student.Course = cboCourse.SelectedItem.ToString()
             student.YearLevel = cboYearLevel.SelectedItem.ToString()
-            student.Section = txtSection.Text.Trim()
+            student.Section = cmbSection.SelectedItem.ToString()
             student.Phone = txtPhone.Text.Trim()
             student.Email = txtEmail.Text.Trim()
             student.MotherName = txtMotherName.Text.Trim()
@@ -79,6 +92,7 @@
             If db.InsertStudent(student) Then
                 lblStatus.ForeColor = Color.Green
                 lblStatus.Text = "Registration successful!"
+                MessageBox.Show("Student registered.", "Success", MessageBoxButtons.OK, MessageBoxIcon.Information)
                 ' After successful registration, clear the registration form.
                 ClearAllFields(Me)
                 ' Generate new student ID for next registration
@@ -86,7 +100,7 @@
             Else
                 lblStatus.ForeColor = Color.Red
                 lblStatus.Text = "Registration failed. Please try again."
-                MessageBox.Show("Failed to save student record to database.", "Database Error", MessageBoxButtons.OK, MessageBoxIcon.Error)
+                MessageBox.Show("Failed to save student record to database. Ensure Section is a single letter A–F.", "Database Error", MessageBoxButtons.OK, MessageBoxIcon.Error)
             End If
         Catch ex As Exception
             lblStatus.ForeColor = Color.Red
@@ -95,6 +109,68 @@
         End Try
     End Sub
 
+    ' === Name/OCCUPATION VALIDATION ===
+
+    ' Regex: Only letters, spaces, apostrophes, hyphens, periods
+    Private Function IsValidNameInput(text As String) As Boolean
+        Return Regex.IsMatch(text, "^[A-Za-z .'-]+$")
+    End Function
+
+    ' Validate all name/occupation fields at once
+    Private Function ValidateAllNameFields() As Boolean
+        Dim valid As Boolean = True
+        valid = ValidateNameField(txtLastName) AndAlso valid
+        valid = ValidateNameField(txtFirstName) AndAlso valid
+        valid = ValidateNameField(txtMiddleName) AndAlso valid
+        valid = ValidateNameField(txtMotherName) AndAlso valid
+        valid = ValidateNameField(txtFatherName) AndAlso valid
+        valid = ValidateNameField(txtGuardianName) AndAlso valid
+        valid = ValidateNameField(txtMotherOccupation) AndAlso valid
+        valid = ValidateNameField(txtFatherOccupation) AndAlso valid
+        valid = ValidateNameField(txtGuardianOccupation) AndAlso valid
+        Return valid
+    End Function
+
+    Private Function ValidateNameField(tb As TextBox) As Boolean
+        If String.IsNullOrWhiteSpace(tb.Text) Then
+            ErrorProvider1.SetError(tb, "")
+            Return True
+        End If
+        If Not IsValidNameInput(tb.Text) Then
+            ErrorProvider1.SetError(tb, "Only letters, spaces, apostrophes, hyphens, and periods are allowed.")
+            Return False
+        Else
+            ErrorProvider1.SetError(tb, "")
+            Return True
+        End If
+    End Function
+
+    ' Handles KeyPress for all name/occupation fields
+    Private Sub NameField_KeyPress(sender As Object, e As KeyPressEventArgs) Handles _
+        txtLastName.KeyPress, txtFirstName.KeyPress, txtMiddleName.KeyPress,
+        txtMotherName.KeyPress, txtFatherName.KeyPress, txtGuardianName.KeyPress,
+        txtMotherOccupation.KeyPress, txtFatherOccupation.KeyPress, txtGuardianOccupation.KeyPress
+
+        Dim allowed = Char.IsControl(e.KeyChar) OrElse
+                      Char.IsLetter(e.KeyChar) OrElse
+                      e.KeyChar = " "c OrElse e.KeyChar = "'"c OrElse e.KeyChar = "-"c OrElse e.KeyChar = "."c
+
+        If Not allowed Then
+            e.Handled = True
+            ErrorProvider1.SetError(DirectCast(sender, Control), "Only letters, spaces, apostrophes, hyphens, and periods are allowed.")
+        Else
+            ErrorProvider1.SetError(DirectCast(sender, Control), "")
+        End If
+    End Sub
+
+    ' Also validate on TextChanged (for pasted text)
+    Private Sub NameField_TextChanged(sender As Object, e As EventArgs) Handles _
+        txtLastName.TextChanged, txtFirstName.TextChanged, txtMiddleName.TextChanged,
+        txtMotherName.TextChanged, txtFatherName.TextChanged, txtGuardianName.TextChanged,
+        txtMotherOccupation.TextChanged, txtFatherOccupation.TextChanged, txtGuardianOccupation.TextChanged
+
+        ValidateNameField(DirectCast(sender, TextBox))
+    End Sub
 
     ' Clear button function
     Private Sub btnClear_Click(sender As Object, e As EventArgs) Handles btnClear.Click
@@ -163,18 +239,18 @@
         Return System.Text.RegularExpressions.Regex.IsMatch(studentID, pattern)
     End Function
 
-    ' Validation Function : Section
+    ' Validation Function : Section (single letter)
     Private Function IsValidSection(section As String) As Boolean
-        Dim pattern As String = "^\d-[A-Z]$"
-        Return System.Text.RegularExpressions.Regex.IsMatch(section, pattern)
+        Dim pattern As String = "^[A-Za-z]$"
+        Return System.Text.RegularExpressions.Regex.IsMatch(section.Trim(), pattern)
     End Function
 
-    ' Shows a message to inform user about the specified format for Section.
-    Private Sub txtSection_TextChanged(sender As Object, e As EventArgs) Handles txtSection.TextChanged
-        If String.IsNullOrWhiteSpace(txtSection.Text) Then
+    ' Clear the section error when selection changes
+    Private Sub cmbSection_SelectedIndexChanged(sender As Object, e As EventArgs) Handles cmbSection.SelectedIndexChanged
+        If cmbSection.SelectedItem Is Nothing Then
             lblSectionError.Text = ""
-        ElseIf Not IsValidSection(txtSection.Text.Trim()) Then
-            lblSectionError.Text = "Format : 0-X"
+        ElseIf Not IsValidSection(cmbSection.SelectedItem.ToString()) Then
+            lblSectionError.Text = "Select A-F"
         Else
             lblSectionError.Text = ""
         End If
@@ -209,14 +285,21 @@
     Private Sub StudentRegistrationForm_Load(sender As Object, e As EventArgs) Handles MyBase.Load
         Dim db As New DatabaseManager()
         db.EnsureTableExists() ' <-- This line ensures the table is created if missing
+        db.EnsureArchiveTableExists()
+        ' Ensure section combo is populated (designer already sets items, this is defensive)
+        If cmbSection.Items.Count = 0 Then
+            cmbSection.Items.AddRange(New Object() {"A", "B", "C", "D", "E", "F"})
+        End If
         txtStudentID.Text = db.GetNextStudentID()
         txtStudentID.ReadOnly = True
         txtLastName.Focus()
     End Sub
 
     Private Sub btnRecords_Click(sender As Object, e As EventArgs) Handles btnRecords.Click
-        Dim recordsForm As New RecordsForm()
+        Me.Hide()
+        Dim recordsForm As New RecordsForm(Me)
         recordsForm.ShowDialog()
+        Me.Show()
     End Sub
 
     Private Sub grpAcademic_Enter(sender As Object, e As EventArgs) Handles grpAcademic.Enter

@@ -54,7 +54,6 @@ Partial Class UpdateStudentRegistration
         lblStudentIDError = New Label()
         Label1 = New Label()
         grpAcademic = New GroupBox()
-        txtSection = New TextBox()
         cboYearLevel = New ComboBox()
         cboCourse = New ComboBox()
         lblSection = New Label()
@@ -94,6 +93,7 @@ Partial Class UpdateStudentRegistration
         txtGuardianName = New TextBox()
         scrollPanel = New Panel()
         vScrollBar = New VScrollBar()
+        cmbSection = New ComboBox()
         grpStudentInfo.SuspendLayout()
         grpAcademic.SuspendLayout()
         grpContact.SuspendLayout()
@@ -107,7 +107,7 @@ Partial Class UpdateStudentRegistration
         lblHeader.Font = New Font("Segoe UI", 15.75F, FontStyle.Bold, GraphicsUnit.Point, CByte(0))
         lblHeader.Location = New Point(186, 12)
         lblHeader.Name = "lblHeader"
-        lblHeader.Size = New Size(345, 37)
+        lblHeader.Size = New Size(384, 37)
         lblHeader.TabIndex = 0
         lblHeader.Text = "Update Student Registration"
         ' 
@@ -453,7 +453,7 @@ Partial Class UpdateStudentRegistration
         ' 
         ' grpAcademic
         ' 
-        grpAcademic.Controls.Add(txtSection)
+        grpAcademic.Controls.Add(cmbSection)
         grpAcademic.Controls.Add(cboYearLevel)
         grpAcademic.Controls.Add(cboCourse)
         grpAcademic.Controls.Add(lblSection)
@@ -468,15 +468,6 @@ Partial Class UpdateStudentRegistration
         grpAcademic.TabIndex = 2
         grpAcademic.TabStop = False
         grpAcademic.Text = "Academic Details"
-        ' 
-        ' txtSection
-        ' 
-        txtSection.Location = New Point(457, 33)
-        txtSection.Margin = New Padding(3, 4, 3, 4)
-        txtSection.MaxLength = 3
-        txtSection.Name = "txtSection"
-        txtSection.Size = New Size(137, 27)
-        txtSection.TabIndex = 3
         ' 
         ' cboYearLevel
         ' 
@@ -493,7 +484,7 @@ Partial Class UpdateStudentRegistration
         ' 
         cboCourse.DropDownStyle = ComboBoxStyle.DropDownList
         cboCourse.FormattingEnabled = True
-        cboCourse.Items.AddRange(New Object() {"BSCRIM", "BSBA", "BSA", "BSAIS", "BSEntrep", "BSE", "BECED", "BSCS", "BSIS", "BSIT", "BSTM", "BSHM", "BSOAD", "BTLED", "BSMATH", "BSPsych", "ABPolSci", "BPA", "BSIE", "BSCE", "BSEE", "BSEMC", "BACOMM"})
+        cboCourse.Items.AddRange(New Object() {"Bachelor of Science in Criminology", "Bachelor of Science in Business Administration", "Bachelor of Science in Accountancy", "Bachelor of Science in Accounting Information System", "Bachelor of Science in Entrepreneurship", "Bachelor of Science in Education", "Bachelor of Early Childhood Education", "Bachelor of Science in Computer Science", "Bachelor of Science in Information System", "Bachelor of Science in Information Technology", "Bachelor of Science in Tourism Management", "Bachelor of Science in Hospitality Management", "Bachelor of Science in Office Administration", "Bachelor of Technology and Livelihood Education", "Bachelor of Science in Mathematics", "Bachelor of Science in Psychology", "Bachelor of Arts in Political Science", "Bachelor of Public Administration", "Bachelor of Science in Industrial Engineering", "Bachelor of Science in Civil Engineering", "Bachelor of Science in Electrical Engineering", "Bachelor of Science in Entertainment and Multimedia Computing", "Bachelor of Arts in Communication"})
         cboCourse.Location = New Point(149, 33)
         cboCourse.Margin = New Padding(3, 4, 3, 4)
         cboCourse.MaxDropDownItems = 5
@@ -617,7 +608,7 @@ Partial Class UpdateStudentRegistration
         lblStatus.ForeColor = Color.Blue
         lblStatus.Location = New Point(211, 1306)
         lblStatus.Name = "lblStatus"
-        lblStatus.Size = New Size(250, 28)
+        lblStatus.Size = New Size(275, 28)
         lblStatus.TabIndex = 8
         lblStatus.Text = "Modify the fields as needed."
         ' 
@@ -876,6 +867,17 @@ Partial Class UpdateStudentRegistration
         vScrollBar.Size = New Size(21, 100)
         vScrollBar.TabIndex = 0
         ' 
+        ' cmbSection
+        ' 
+        cmbSection.DropDownStyle = ComboBoxStyle.DropDownList
+        cmbSection.FormattingEnabled = True
+        cmbSection.Items.AddRange(New Object() {"A", "B", "C", "D", "E", "F"})
+        cmbSection.Location = New Point(457, 33)
+        cmbSection.Margin = New Padding(3, 4, 3, 4)
+        cmbSection.Name = "cmbSection"
+        cmbSection.Size = New Size(137, 28)
+        cmbSection.TabIndex = 12
+        ' 
         ' UpdateStudentRegistration
         ' 
         AutoScaleDimensions = New SizeF(8.0F, 20.0F)
@@ -919,7 +921,6 @@ Partial Class UpdateStudentRegistration
     Friend WithEvents lblMiddleName As Label
     Friend WithEvents lblStudentID As Label
     Friend WithEvents grpAcademic As GroupBox
-    Friend WithEvents txtSection As TextBox
     Friend WithEvents cboYearLevel As ComboBox
     Friend WithEvents cboCourse As ComboBox
     Friend WithEvents lblSection As Label
@@ -1070,5 +1071,7 @@ Partial Class UpdateStudentRegistration
             e.Handled = True
         End If
     End Sub
+
+    Friend WithEvents cmbSection As ComboBox
 
 End Class

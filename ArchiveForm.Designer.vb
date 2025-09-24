@@ -30,6 +30,8 @@ Partial Class ArchiveForm
         btnRefresh = New Button()
         btnDelete = New Button()
         btnRestore = New Button()
+        txtSearchArchive = New TextBox()
+        btnSearchArchive = New Button()
         pnlTop.SuspendLayout()
         CType(dgvArchive, ComponentModel.ISupportInitialize).BeginInit()
         pnlBottom.SuspendLayout()
@@ -120,6 +122,22 @@ Partial Class ArchiveForm
         btnRestore.Text = "Restore Selected"
         btnRestore.UseVisualStyleBackColor = True
         ' 
+        ' txtSearchArchive
+        ' 
+        txtSearchArchive.Location = New Point(23, 20)
+        txtSearchArchive.Name = "txtSearchArchive"
+        txtSearchArchive.Size = New Size(200, 27)
+        txtSearchArchive.TabIndex = 0
+        ' 
+        ' btnSearchArchive
+        ' 
+        btnSearchArchive.Location = New Point(230, 20)
+        btnSearchArchive.Name = "btnSearchArchive"
+        btnSearchArchive.Size = New Size(80, 27)
+        btnSearchArchive.TabIndex = 1
+        btnSearchArchive.Text = "Search"
+        btnSearchArchive.UseVisualStyleBackColor = True
+        ' 
         ' ArchiveForm
         ' 
         AutoScaleDimensions = New SizeF(8.0F, 20.0F)
@@ -128,6 +146,8 @@ Partial Class ArchiveForm
         Controls.Add(dgvArchive)
         Controls.Add(pnlBottom)
         Controls.Add(pnlTop)
+        Controls.Add(txtSearchArchive)
+        Controls.Add(btnSearchArchive)
         MinimumSize = New Size(600, 400)
         Name = "ArchiveForm"
         StartPosition = FormStartPosition.CenterScreen
@@ -137,6 +157,7 @@ Partial Class ArchiveForm
         CType(dgvArchive, ComponentModel.ISupportInitialize).EndInit()
         pnlBottom.ResumeLayout(False)
         ResumeLayout(False)
+        PerformLayout()
     End Sub
 
     Friend WithEvents pnlTop As Panel
@@ -147,4 +168,6 @@ Partial Class ArchiveForm
     Friend WithEvents btnDelete As Button
     Friend WithEvents btnRefresh As Button
     Friend WithEvents btnClose As Button
+    Friend WithEvents txtSearchArchive As TextBox
+    Friend WithEvents btnSearchArchive As Button
 End Class

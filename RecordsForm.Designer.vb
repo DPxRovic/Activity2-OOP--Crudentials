@@ -32,6 +32,8 @@ Partial Class RecordsForm
         btnRefresh = New Button()
         btnOpenArchive = New Button()
         btnBack = New Button()
+        txtSearchRecords = New TextBox()
+        btnSearchRecords = New Button()
         pnlTop.SuspendLayout()
         CType(dgvRecords, ComponentModel.ISupportInitialize).BeginInit()
         pnlBottom.SuspendLayout()
@@ -41,6 +43,8 @@ Partial Class RecordsForm
         ' 
         pnlTop.Controls.Add(txtSearch)
         pnlTop.Controls.Add(btnSearch)
+        pnlTop.Controls.Add(txtSearchRecords)
+        pnlTop.Controls.Add(btnSearchRecords)
         pnlTop.Dock = DockStyle.Top
         pnlTop.Location = New Point(0, 0)
         pnlTop.Margin = New Padding(3, 4, 3, 4)
@@ -149,6 +153,22 @@ Partial Class RecordsForm
         btnBack.Text = "Back to Registration"
         btnBack.UseVisualStyleBackColor = True
         ' 
+        ' txtSearchRecords
+        ' 
+        txtSearchRecords.Location = New Point(23, 20)
+        txtSearchRecords.Name = "txtSearchRecords"
+        txtSearchRecords.Size = New Size(200, 27)
+        txtSearchRecords.TabIndex = 0
+        ' 
+        ' btnSearchRecords
+        ' 
+        btnSearchRecords.Location = New Point(230, 20)
+        btnSearchRecords.Name = "btnSearchRecords"
+        btnSearchRecords.Size = New Size(80, 27)
+        btnSearchRecords.TabIndex = 1
+        btnSearchRecords.Text = "Search"
+        btnSearchRecords.UseVisualStyleBackColor = True
+        ' 
         ' RecordsForm
         ' 
         AutoScaleDimensions = New SizeF(8.0F, 20.0F)
@@ -166,6 +186,7 @@ Partial Class RecordsForm
         CType(dgvRecords, ComponentModel.ISupportInitialize).EndInit()
         pnlBottom.ResumeLayout(False)
         ResumeLayout(False)
+        PerformLayout()
 
     End Sub
 
@@ -179,4 +200,6 @@ Partial Class RecordsForm
     Friend WithEvents btnRefresh As Button
     Friend WithEvents btnOpenArchive As Button
     Friend WithEvents btnBack As Button
+    Friend WithEvents txtSearchRecords As TextBox
+    Friend WithEvents btnSearchRecords As Button
 End Class

@@ -2,10 +2,13 @@
 
 Public Class ArchiveForm
     Private dt As DataTable
-    Private parentForm As RecordsForm ' Reference to parent form for refreshing
+    Private parentForm As Form ' Reference to parent form for refreshing
+
+    ' Store last loaded data for refresh comparison
+    Private lastLoadedData As DataTable
 
     ' Constructor with parent form reference
-    Public Sub New(Optional parent As RecordsForm = Nothing)
+    Public Sub New(Optional parent As Form = Nothing)
         ' This call is required by the designer
         InitializeComponent()
 
@@ -15,20 +18,19 @@ Public Class ArchiveForm
 
     ' Form Load Event
     Private Sub ArchiveForm_Load(sender As Object, e As EventArgs) Handles MyBase.Load
-        ' Set form properties
         Me.FormBorderStyle = FormBorderStyle.Sizable
         Me.MinimumSize = New Size(600, 400)
         Me.MaximizeBox = True
         Me.MinimizeBox = True
         Me.StartPosition = FormStartPosition.CenterScreen
 
-        ' Configure DataGridView
-        dgvArchive.AutoSizeColumnsMode = DataGridViewAutoSizeColumnsMode.Fill
+        dgvArchive.AutoSizeColumnsMode = DataGridViewAutoSizeColumnsMode.None
+        dgvArchive.ScrollBars = ScrollBars.Both
+        dgvArchive.AutoResizeColumns()
         dgvArchive.SelectionMode = DataGridViewSelectionMode.FullRowSelect
         dgvArchive.MultiSelect = False
         dgvArchive.ReadOnly = True
 
-        ' Load archived data
         LoadArchiveData()
     End Sub
 
@@ -65,6 +67,9 @@ Public Class ArchiveForm
 
             ' Update title to show count
             lblTitle.Text = $"Archived Student Records ({dt.Rows.Count} records)"
+
+            ' Store loaded data for refresh comparison
+            lastLoadedData = dt.Copy()
 
         Catch ex As Exception
             MessageBox.Show("Error loading archived records: " & ex.Message, "Database Error", MessageBoxButtons.OK, MessageBoxIcon.Error)
@@ -154,9 +159,11 @@ Public Class ArchiveForm
                     LoadArchiveData() ' Refresh the archive display
 
                     ' Refresh parent form if available
-                    If parentForm IsNot Nothing Then
-                        parentForm.RefreshRecords()
+                    Dim recordsParent = TryCast(parentForm, RecordsForm)
+                    If recordsParent IsNot Nothing Then
+                        recordsParent.RefreshRecords()
                     End If
+
                 Else
                     MessageBox.Show("Failed to restore student record. The Student ID might already exist in active records.", "Restore Failed", MessageBoxButtons.OK, MessageBoxIcon.Error)
                 End If
@@ -211,10 +218,65 @@ Public Class ArchiveForm
         End If
     End Sub
 
-    ' Refresh the archive data
+    ' Call this to load or reload data
+    Private Sub LoadData()
+        Dim db As New DatabaseManager()
+        Dim dt As DataTable = DatabaseManager.GetArchiveData()
+        dgvArchive.DataSource = dt
+        lastLoadedData = dt.Copy()
+        dgvArchive.ClearSelection()
+    End Sub
+
+    ' Helper to compare DataTables
+    Private Function DataTablesAreEqual(dt1 As DataTable, dt2 As DataTable) As Boolean
+        If dt1 Is Nothing OrElse dt2 Is Nothing Then Return False
+        If dt1.Rows.Count <> dt2.Rows.Count OrElse dt1.Columns.Count <> dt2.Columns.Count Then Return False
+        For i = 0 To dt1.Rows.Count - 1
+            For j = 0 To dt1.Columns.Count - 1
+                If Not Object.Equals(dt1.Rows(i)(j), dt2.Rows(i)(j)) Then Return False
+            Next
+        Next
+        Return True
+    End Function
+
+    ' Refresh button click
     Private Sub btnRefresh_Click(sender As Object, e As EventArgs) Handles btnRefresh.Click
-        LoadArchiveData()
-        MessageBox.Show("Archive records refreshed successfully!", "Refreshed", MessageBoxButtons.OK, MessageBoxIcon.Information)
+        Dim latestData As DataTable = DatabaseManager.GetArchiveData()
+        If lastLoadedData IsNot Nothing AndAlso DataTablesAreEqual(lastLoadedData, latestData) Then
+            MessageBox.Show("Nothing to refresh.", "Info", MessageBoxButtons.OK, MessageBoxIcon.Information)
+        Else
+            dgvArchive.DataSource = latestData
+            lastLoadedData = latestData.Copy()
+            dgvArchive.ClearSelection()
+        End If
+    End Sub
+
+    ' Search button click
+    Private Sub btnSearchArchive_Click(sender As Object, e As EventArgs) Handles btnSearchArchive.Click
+        Dim searchTerm As String = txtSearchArchive.Text.Trim().ToLower()
+        If String.IsNullOrEmpty(searchTerm) Then
+            LoadData()
+            Return
+        End If
+        Dim dt As DataTable = DatabaseManager.GetArchiveData()
+        Dim filtered = dt.AsEnumerable().Where(Function(row) _
+            row.Field(Of String)("LastName").ToLower().Contains(searchTerm) OrElse
+            row.Field(Of String)("FirstName").ToLower().Contains(searchTerm) OrElse
+            row.Field(Of String)("Course").ToLower().Contains(searchTerm) OrElse
+            row.Field(Of String)("Section").ToLower().Contains(searchTerm)
+        )
+        If filtered.Any() Then
+            dgvArchive.DataSource = filtered.CopyToDataTable()
+        Else
+            dgvArchive.DataSource = Nothing
+            MessageBox.Show("No records found.", "Search", MessageBoxButtons.OK, MessageBoxIcon.Information)
+        End If
+        dgvArchive.ClearSelection()
+    End Sub
+
+    ' Optional: handle Enter key in search box
+    Private Sub txtSearchArchive_KeyDown(sender As Object, e As KeyEventArgs) Handles txtSearchArchive.KeyDown
+        If e.KeyCode = Keys.Enter Then btnSearchArchive.PerformClick()
     End Sub
 
     ' Close the form
@@ -224,7 +286,7 @@ Public Class ArchiveForm
 
     ' Form closing event
     Protected Overrides Sub OnFormClosing(e As FormClosingEventArgs)
-        ' Clean up resources if needed
+        If parentForm IsNot Nothing Then parentForm.Show()
         MyBase.OnFormClosing(e)
     End Sub
 

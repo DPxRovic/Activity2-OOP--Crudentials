@@ -2,6 +2,16 @@
     Private dt As DataTable
     Private db As DatabaseManager
 
+    ' Store last loaded data for refresh comparison
+    Private lastLoadedData As DataTable
+    Private studentRegistrationForm As StudentRegistrationForm
+    Private parentForm As Form
+
+    Public Sub New(Optional parent As Form = Nothing)
+        InitializeComponent()
+        parentForm = parent
+    End Sub
+
     Private Sub RecordsForm_Load(sender As Object, e As EventArgs) Handles MyBase.Load
         Me.FormBorderStyle = FormBorderStyle.Sizable
         Me.MinimumSize = New Size(600, 400)
@@ -10,17 +20,24 @@
         Me.AutoSize = False
         Me.StartPosition = FormStartPosition.CenterScreen
 
-        ' Initialize database manager
         db = New DatabaseManager()
-
-        ' Load data from database
         LoadStudentRecords()
 
-        ' Configure DataGridView
-        dgvRecords.AutoSizeColumnsMode = DataGridViewAutoSizeColumnsMode.Fill
+        dgvRecords.AutoSizeColumnsMode = DataGridViewAutoSizeColumnsMode.None
+        dgvRecords.ScrollBars = ScrollBars.Both
+        dgvRecords.AutoResizeColumns()
         dgvRecords.SelectionMode = DataGridViewSelectionMode.FullRowSelect
         dgvRecords.MultiSelect = False
         dgvRecords.ReadOnly = True
+    End Sub
+
+    ' Call this to load or reload data
+    Private Sub LoadData()
+        Dim db As New DatabaseManager()
+        Dim dt As DataTable = db.GetAllStudents()
+        dgvRecords.DataSource = dt
+        lastLoadedData = dt.Copy()
+        dgvRecords.ClearSelection()
     End Sub
 
     Private Sub LoadStudentRecords()
@@ -72,6 +89,18 @@
         End Try
     End Sub
 
+    ' Helper to compare DataTables
+    Private Function DataTablesAreEqual(dt1 As DataTable, dt2 As DataTable) As Boolean
+        If dt1 Is Nothing OrElse dt2 Is Nothing Then Return False
+        If dt1.Rows.Count <> dt2.Rows.Count OrElse dt1.Columns.Count <> dt2.Columns.Count Then Return False
+        For i = 0 To dt1.Rows.Count - 1
+            For j = 0 To dt1.Columns.Count - 1
+                If Not Object.Equals(dt1.Rows(i)(j), dt2.Rows(i)(j)) Then Return False
+            Next
+        Next
+        Return True
+    End Function
+
     Private Sub btnSearch_Click(sender As Object, e As EventArgs) Handles btnSearch.Click
         Dim filterText As String = txtSearch.Text.Trim()
         If String.IsNullOrWhiteSpace(filterText) Then
@@ -91,19 +120,23 @@
         End Try
     End Sub
 
+    ' Refresh button click
     Private Sub btnRefresh_Click(sender As Object, e As EventArgs) Handles btnRefresh.Click
-        LoadStudentRecords()
-        MessageBox.Show("Records refreshed successfully!")
+        Dim latestData As DataTable = db.GetAllStudents()
+        If lastLoadedData IsNot Nothing AndAlso DataTablesAreEqual(lastLoadedData, latestData) Then
+            MessageBox.Show("Nothing to refresh.", "Info", MessageBoxButtons.OK, MessageBoxIcon.Information)
+        Else
+            dgvRecords.DataSource = latestData
+            lastLoadedData = latestData.Copy()
+            dgvRecords.ClearSelection()
+        End If
     End Sub
 
     Private Sub btnUpdate_Click(sender As Object, e As EventArgs) Handles btnUpdate.Click
         If dgvRecords.SelectedRows.Count > 0 Then
             Try
-                ' Get the selected row
                 Dim selectedRow As DataGridViewRow = dgvRecords.SelectedRows(0)
                 Dim studentID As String = selectedRow.Cells("StudentID").Value.ToString()
-
-                ' Find the corresponding DataRow in the DataTable
                 Dim studentRecord As DataRow = Nothing
                 For Each row As DataRow In dt.Rows
                     If row("StudentID").ToString() = studentID Then
@@ -111,13 +144,11 @@
                         Exit For
                     End If
                 Next
-
                 If studentRecord IsNot Nothing Then
-                    ' Open the UpdateStudentRegistration form with the selected student's data
-                    Dim updateForm As New UpdateStudentRegistration(studentRecord)
+                    Me.Hide()
+                    Dim updateForm As New UpdateStudentRegistration(studentRecord, Me)
                     updateForm.ShowDialog()
-
-                    ' Refresh the records after the update form is closed
+                    Me.Show()
                     LoadStudentRecords()
                 Else
                     MessageBox.Show("Error: Could not find student record.", "Error", MessageBoxButtons.OK, MessageBoxIcon.Error)
@@ -217,15 +248,11 @@
 
     ' New button to open Archive form
     Private Sub btnOpenArchive_Click(sender As Object, e As EventArgs) Handles btnOpenArchive.Click
-        Try
-            Dim archiveForm As New ArchiveForm(Me) ' Pass reference to refresh records when needed
-            archiveForm.ShowDialog()
-
-            ' Refresh records in case any were restored
-            LoadStudentRecords()
-        Catch ex As Exception
-            MessageBox.Show("Error opening archive: " & ex.Message, "Error", MessageBoxButtons.OK, MessageBoxIcon.Error)
-        End Try
+        Me.Hide()
+        Dim archiveForm As New ArchiveForm(Me)
+        archiveForm.ShowDialog()
+        Me.Show()
+        LoadStudentRecords()
     End Sub
 
     Private Sub btnBack_Click(sender As Object, e As EventArgs) Handles btnBack.Click
@@ -246,5 +273,15 @@
     End Sub
 
     Private Sub pnlTop_Paint(sender As Object, e As PaintEventArgs) Handles pnlTop.Paint
+    End Sub
+
+    ' Optional: handle Enter key in search box
+    Private Sub txtSearchRecords_KeyDown(sender As Object, e As KeyEventArgs) Handles txtSearchRecords.KeyDown
+        If e.KeyCode = Keys.Enter Then btnSearchRecords.PerformClick()
+    End Sub
+
+    Protected Overrides Sub OnFormClosing(e As FormClosingEventArgs)
+        If parentForm IsNot Nothing Then parentForm.Show()
+        MyBase.OnFormClosing(e)
     End Sub
 End Class

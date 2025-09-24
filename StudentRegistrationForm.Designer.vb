@@ -54,7 +54,7 @@ Partial Class StudentRegistrationForm
         lblStudentIDError = New Label()
         Label1 = New Label()
         grpAcademic = New GroupBox()
-        txtSection = New TextBox()
+        cmbSection = New ComboBox()
         cboYearLevel = New ComboBox()
         cboCourse = New ComboBox()
         lblSection = New Label()
@@ -453,7 +453,7 @@ Partial Class StudentRegistrationForm
         ' 
         ' grpAcademic
         ' 
-        grpAcademic.Controls.Add(txtSection)
+        grpAcademic.Controls.Add(cmbSection)
         grpAcademic.Controls.Add(cboYearLevel)
         grpAcademic.Controls.Add(cboCourse)
         grpAcademic.Controls.Add(lblSection)
@@ -469,14 +469,16 @@ Partial Class StudentRegistrationForm
         grpAcademic.TabStop = False
         grpAcademic.Text = "Academic Details"
         ' 
-        ' txtSection
+        ' cmbSection
         ' 
-        txtSection.Location = New Point(457, 33)
-        txtSection.Margin = New Padding(3, 4, 3, 4)
-        txtSection.MaxLength = 3
-        txtSection.Name = "txtSection"
-        txtSection.Size = New Size(137, 27)
-        txtSection.TabIndex = 3
+        cmbSection.DropDownStyle = ComboBoxStyle.DropDownList
+        cmbSection.FormattingEnabled = True
+        cmbSection.Items.AddRange(New Object() {"A", "B", "C", "D", "E", "F"})
+        cmbSection.Location = New Point(457, 33)
+        cmbSection.Margin = New Padding(3, 4, 3, 4)
+        cmbSection.Name = "cmbSection"
+        cmbSection.Size = New Size(137, 28)
+        cmbSection.TabIndex = 3
         ' 
         ' cboYearLevel
         ' 
@@ -493,7 +495,7 @@ Partial Class StudentRegistrationForm
         ' 
         cboCourse.DropDownStyle = ComboBoxStyle.DropDownList
         cboCourse.FormattingEnabled = True
-        cboCourse.Items.AddRange(New Object() {"BSCRIM", "BSBA", "BSA", "BSAIS", "BSEntrep", "BSE", "BECED", "BSCS", "BSIS", "BSIT", "BSTM", "BSHM", "BSOAD", "BTLED", "BSMATH", "BSPsych", "ABPolSci", "BPA", "BSIE", "BSCE", "BSEE", "BSEMC", "BACOMM"})
+        cboCourse.Items.AddRange(New Object() {"Bachelor of Science in Criminology", "Bachelor of Science in Business Administration", "Bachelor of Science in Accountancy", "Bachelor of Science in Accounting Information System", "Bachelor of Science in Entrepreneurship", "Bachelor of Science in Education", "Bachelor of Early Childhood Education", "Bachelor of Science in Computer Science", "Bachelor of Science in Information System", "Bachelor of Science in Information Technology", "Bachelor of Science in Tourism Management", "Bachelor of Science in Hospitality Management", "Bachelor of Science in Office Administration", "Bachelor of Technology and Livelihood Education", "Bachelor of Science in Mathematics", "Bachelor of Science in Psychology", "Bachelor of Arts in Political Science", "Bachelor of Public Administration", "Bachelor of Science in Industrial Engineering", "Bachelor of Science in Civil Engineering", "Bachelor of Science in Electrical Engineering", "Bachelor of Science in Entertainment and Multimedia Computing", "Bachelor of Arts in Communication"})
         cboCourse.Location = New Point(149, 33)
         cboCourse.Margin = New Padding(3, 4, 3, 4)
         cboCourse.MaxDropDownItems = 5
@@ -931,7 +933,7 @@ Partial Class StudentRegistrationForm
     Friend WithEvents lblMiddleName As Label
     Friend WithEvents lblStudentID As Label
     Friend WithEvents grpAcademic As GroupBox
-    Friend WithEvents txtSection As TextBox
+    Friend WithEvents cmbSection As ComboBox
     Friend WithEvents cboYearLevel As ComboBox
     Friend WithEvents cboCourse As ComboBox
     Friend WithEvents lblSection As Label
